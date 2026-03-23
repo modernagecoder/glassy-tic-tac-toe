@@ -10,7 +10,7 @@ service cloud.firestore {
     // Collection: users
     // Document ID: {userId}
     // Fields:
-    //   - nickname: string (required, immutable) - The user's chosen display name
+    //   - nickname: string (required) - The user's chosen display name
     //   - score: number (required) - Total score calculated from wins, losses, and draws
     //   - wins: number (required) - Number of games won
     //   - losses: number (required) - Number of games lost
@@ -100,7 +100,7 @@ service cloud.firestore {
       // Only the user can update their own profile stats
       allow update: if isOwner(userId) && 
                        isValidUser(request.resource.data) &&
-                       areImmutableFieldsUnchanged(['nickname', 'createdAt']);
+                       areImmutableFieldsUnchanged(['createdAt']);
     }
 
     match /games/{gameId} {
