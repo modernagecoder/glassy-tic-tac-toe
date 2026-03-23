@@ -1,7 +1,10 @@
+import { useState } from 'react';
 import { GlassContainer } from './GlassContainer';
 import { UserProfile } from '../types';
-import { User, Users, Trophy, Play } from 'lucide-react';
+import { User, Users, Trophy, Play, Edit2, Check, X, Loader2 } from 'lucide-react';
 import { motion } from 'motion/react';
+import { auth, db } from '../firebase';
+import { doc, updateDoc } from 'firebase/firestore';
 
 interface HomeProps {
   userProfile: UserProfile;
@@ -9,16 +12,82 @@ interface HomeProps {
 }
 
 export function Home({ userProfile, onSelectMode }: HomeProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [newNickname, setNewNickname] = useState(userProfile.nickname);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSave = async () => {
+    const trimmed = newNickname.trim();
+    if (!trimmed || trimmed === userProfile.nickname || trimmed.length > 20) {
+      setIsEditing(false);
+      setNewNickname(userProfile.nickname);
+      return;
+    }
+    
+    setIsSaving(true);
+    try {
+      const userId = auth.currentUser?.uid;
+      if (userId) {
+        await updateDoc(doc(db, 'users', userId), { nickname: trimmed });
+      }
+      setIsEditing(false);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <div className="w-full max-w-md mx-auto">
       <GlassContainer className="mb-8">
         <div className="flex items-center justify-between">
           <div>
             <div className="text-sm text-white/50 uppercase tracking-widest font-semibold mb-1">Player</div>
-            <div className="text-xl font-bold text-white flex items-center gap-2">
-              <User className="w-5 h-5 text-emerald-400" />
-              {userProfile.nickname}
-            </div>
+            {isEditing ? (
+              <div className="flex items-center gap-2 mt-1">
+                <input
+                  type="text"
+                  value={newNickname}
+                  onChange={(e) => setNewNickname(e.target.value)}
+                  maxLength={20}
+                  className="bg-black/20 border border-white/20 rounded-lg px-3 py-1 text-white text-lg focus:outline-none focus:border-emerald-500 w-40"
+                  autoFocus
+                />
+                <button 
+                  onClick={handleSave}
+                  disabled={isSaving}
+                  className="p-1.5 bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/40 rounded-lg transition-colors"
+                >
+                  {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                </button>
+                <button 
+                  onClick={() => {
+                    setIsEditing(false);
+                    setNewNickname(userProfile.nickname);
+                  }}
+                  disabled={isSaving}
+                  className="p-1.5 bg-rose-500/20 text-rose-400 hover:bg-rose-500/40 rounded-lg transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <div className="text-xl font-bold text-white flex items-center gap-2">
+                <User className="w-5 h-5 text-emerald-400" />
+                <span className="truncate max-w-[150px]">{userProfile.nickname}</span>
+                <button 
+                  onClick={() => {
+                    setNewNickname(userProfile.nickname);
+                    setIsEditing(true);
+                  }}
+                  className="p-1 text-white/40 hover:text-white transition-colors ml-1"
+                  title="Edit Nickname"
+                >
+                  <Edit2 className="w-4 h-4" />
+                </button>
+              </div>
+            )}
           </div>
           <div className="text-right">
             <div className="text-sm text-white/50 uppercase tracking-widest font-semibold mb-1">Score</div>
