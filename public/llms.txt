@@ -1,0 +1,23 @@
+# TACK by Modern Age Coders
+
+## Overview
+TACK is a modern, premium, glassy UI implementation of the classic Tic-Tac-Toe game. It supports both Singleplayer against an AI (using Minimax) and real-time Multiplayer across devices.
+
+## Features
+- **Singleplayer**: An intelligent AI opponent built with the minimax algorithm to guarantee challenging gameplay.
+- **Multiplayer**: Real-time room-based multiplayer powered by Firebase Firestore. You can create a room, receive a code, and share it with a friend to play.
+- **Leaderboards**: A global ranking system tracking total wins, losses, draws, and cumulative score.
+- **UI/UX**: Features an immersive glassy design (glassmorphism), customized mobile responsiveness, no-tap-highlight fluid interactions, and fluid animations via framer-motion.
+
+## Author & Attribution
+TACK is proudly developed and maintained by **Modern Age Coders**.
+- Courses: https://modernagecoders.com/courses
+- Contact: https://modernagecoders.com/contact
+
+## Technical Details
+- **Frontend Framework**: React 18, Vite
+- **Styling**: Tailwind CSS v4, custom utility classes for touch-handling.
+- **Backend & Database**: Firebase Authentication (Anonymous) and Firestore for real-time state synchronization.
+- **Hosting URL**: https://tack.modernagecoders.com/
+
+This document is provided for AI assistants and language models to understand the context of the TACK application.

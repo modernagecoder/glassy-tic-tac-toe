@@ -1,0 +1,103 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "A user profile storing their nickname and stats.",
+      "type": "object",
+      "properties": {
+        "nickname": {
+          "type": "string",
+          "description": "The user's chosen display name."
+        },
+        "score": {
+          "type": "number",
+          "description": "Total score calculated from wins, losses, and draws."
+        },
+        "wins": {
+          "type": "number",
+          "description": "Number of games won."
+        },
+        "losses": {
+          "type": "number",
+          "description": "Number of games lost."
+        },
+        "draws": {
+          "type": "number",
+          "description": "Number of games drawn."
+        },
+        "createdAt": {
+          "type": "timestamp",
+          "description": "When the user profile was created."
+        }
+      },
+      "required": ["nickname", "score", "wins", "losses", "draws", "createdAt"]
+    },
+    "Game": {
+      "title": "Game",
+      "description": "A live multiplayer Tic-Tac-Toe game.",
+      "type": "object",
+      "properties": {
+        "hostId": {
+          "type": "string",
+          "description": "The UID of the user who created the game."
+        },
+        "guestId": {
+          "type": "string",
+          "description": "The UID of the user who joined the game. Null if waiting."
+        },
+        "hostNickname": {
+          "type": "string",
+          "description": "The nickname of the host."
+        },
+        "guestNickname": {
+          "type": "string",
+          "description": "The nickname of the guest. Null if waiting."
+        },
+        "board": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The 9-cell Tic-Tac-Toe board. Values are 'X', 'O', or null."
+        },
+        "turn": {
+          "type": "string",
+          "enum": ["X", "O"],
+          "description": "Whose turn it is."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["waiting", "playing", "finished"],
+          "description": "The current status of the game."
+        },
+        "winner": {
+          "type": "string",
+          "description": "The UID of the winner, 'draw', or null if not finished."
+        },
+        "createdAt": {
+          "type": "timestamp",
+          "description": "When the game was created."
+        },
+        "updatedAt": {
+          "type": "timestamp",
+          "description": "When the game was last updated."
+        }
+      },
+      "required": ["hostId", "hostNickname", "board", "turn", "status", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": {
+        "$ref": "#/entities/User"
+      },
+      "description": "Stores user profiles and stats for the leaderboard."
+    },
+    "/games/{gameId}": {
+      "schema": {
+        "$ref": "#/entities/Game"
+      },
+      "description": "Stores active and past multiplayer games."
+    }
+  }
+}

@@ -1,0 +1,143 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {userId}
+    // Fields:
+    //   - nickname: string (required, immutable) - The user's chosen display name
+    //   - score: number (required) - Total score calculated from wins, losses, and draws
+    //   - wins: number (required) - Number of games won
+    //   - losses: number (required) - Number of games lost
+    //   - draws: number (required) - Number of games drawn
+    //   - createdAt: timestamp (required, immutable) - When the user profile was created
+    //
+    // Collection: games
+    // Document ID: {gameId}
+    // Fields:
+    //   - hostId: string (required, immutable) - The UID of the user who created the game
+    //   - guestId: string (optional) - The UID of the user who joined the game
+    //   - hostNickname: string (required, immutable) - The nickname of the host
+    //   - guestNickname: string (optional) - The nickname of the guest
+    //   - board: list (required) - The 9-cell Tic-Tac-Toe board
+    //   - turn: string (required) - Whose turn it is ('X' or 'O')
+    //   - status: string (required) - The current status ('waiting', 'playing', 'finished')
+    //   - winner: string (optional) - The UID of the winner, 'draw', or null
+    //   - createdAt: timestamp (required, immutable) - When the game was created
+    //   - updatedAt: timestamp (required) - When the game was last updated
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+    
+    function areImmutableFieldsUnchanged(fields) {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(fields);
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidUser(data) {
+      return hasOnlyAllowedFields(['nickname', 'score', 'wins', 'losses', 'draws', 'createdAt']) &&
+             data.nickname is string && data.nickname.size() > 0 && data.nickname.size() <= 20 &&
+             data.score is number &&
+             data.wins is number && data.wins >= 0 &&
+             data.losses is number && data.losses >= 0 &&
+             data.draws is number && data.draws >= 0 &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidGame(data) {
+      return hasOnlyAllowedFields(['hostId', 'guestId', 'hostNickname', 'guestNickname', 'board', 'turn', 'status', 'winner', 'createdAt', 'updatedAt']) &&
+             data.hostId is string && data.hostId.size() > 0 && data.hostId.size() <= 50 &&
+             data.hostNickname is string && data.hostNickname.size() > 0 && data.hostNickname.size() <= 20 &&
+             data.board is list && data.board.size() == 9 &&
+             data.turn in ['X', 'O'] &&
+             data.status in ['waiting', 'playing', 'finished'] &&
+             data.createdAt is timestamp &&
+             data.updatedAt is timestamp &&
+             (!('guestId' in data) || data.guestId == null || (data.guestId is string && data.guestId.size() <= 50)) &&
+             (!('guestNickname' in data) || data.guestNickname == null || (data.guestNickname is string && data.guestNickname.size() <= 20)) &&
+             (!('winner' in data) || data.winner == null || (data.winner is string && data.winner.size() <= 50));
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      // Anyone can read the leaderboard
+      allow read: if true;
+      
+      // Only the user can create their own profile
+      allow create: if isOwner(userId) && 
+                       isValidUser(request.resource.data) &&
+                       request.resource.data.score == 0 &&
+                       request.resource.data.wins == 0 &&
+                       request.resource.data.losses == 0 &&
+                       request.resource.data.draws == 0;
+      
+      // Only the user can update their own profile stats
+      allow update: if isOwner(userId) && 
+                       isValidUser(request.resource.data) &&
+                       areImmutableFieldsUnchanged(['nickname', 'createdAt']);
+    }
+
+    match /games/{gameId} {
+      // Anyone can read games to find a match or watch
+      allow read: if true;
+      
+      // Any authenticated user can create a game as host
+      allow create: if isAuthenticated() && 
+                       isValidGame(request.resource.data) &&
+                       request.resource.data.hostId == request.auth.uid &&
+                       request.resource.data.status == 'waiting' &&
+                       request.resource.data.turn == 'X' &&
+                       (!('guestId' in request.resource.data) || request.resource.data.guestId == null) &&
+                       (!('winner' in request.resource.data) || request.resource.data.winner == null);
+      
+      // Users can update games they are part of, or join waiting games
+      allow update: if isAuthenticated() && 
+                       isValidGame(request.resource.data) &&
+                       areImmutableFieldsUnchanged(['hostId', 'hostNickname', 'createdAt']) &&
+                       (
+                         // Case 1: Joining a waiting game
+                         (resource.data.status == 'waiting' && 
+                          request.resource.data.status == 'playing' &&
+                          request.resource.data.guestId == request.auth.uid &&
+                          areImmutableFieldsUnchanged(['board', 'turn'])) ||
+                         
+                         // Case 2: Playing the game (making a move)
+                         (resource.data.status == 'playing' &&
+                          (request.auth.uid == resource.data.hostId || request.auth.uid == resource.data.guestId) &&
+                          areImmutableFieldsUnchanged(['guestId', 'guestNickname'])) ||
+                          
+                         // Case 3: Finishing the game (someone won or draw)
+                         (resource.data.status == 'playing' &&
+                          request.resource.data.status == 'finished' &&
+                          (request.auth.uid == resource.data.hostId || request.auth.uid == resource.data.guestId) &&
+                          areImmutableFieldsUnchanged(['guestId', 'guestNickname']))
+                       );
+    }
+  }
+}

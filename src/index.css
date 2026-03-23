@@ -1,0 +1,12 @@
+@import "tailwindcss";
+
+@layer utilities {
+  .touch-none {
+    touch-action: none;
+  }
+}
+
+body {
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
