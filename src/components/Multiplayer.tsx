@@ -139,7 +139,8 @@ export function Multiplayer({ onBack, userProfile }: { onBack: () => void, userP
   }, [gameState?.status, gameState?.winner, gameId, userId]);
 
   const copyToClipboard = () => {
-    navigator.clipboard.writeText(gameId);
+    const inviteMessage = `Play TACK with me! 🎮\nGo to https://tack.modernagecoders.com\nClick "Multiplayer" and use code: ${gameId}`;
+    navigator.clipboard.writeText(inviteMessage);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
