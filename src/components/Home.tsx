@@ -94,44 +94,22 @@ export function Home({ userProfile, onSelectMode }: HomeProps) {
             <div className="text-2xl font-bold text-emerald-400">{userProfile.score}</div>
           </div>
         </div>
-        <div className="mt-4 pt-4 border-t border-white/10 flex justify-between text-sm text-white/70">
+        <div className="mt-4 pt-4 border-t border-white/10 flex justify-between items-center text-sm text-white/70">
           <span>Wins: <strong className="text-white">{userProfile.wins}</strong></span>
           <span>Losses: <strong className="text-white">{userProfile.losses}</strong></span>
           <span>Draws: <strong className="text-white">{userProfile.draws}</strong></span>
+          <button
+            onClick={() => onSelectMode('leaderboard')}
+            className="flex items-center gap-1.5 text-amber-400 hover:text-amber-300 transition-colors ml-2"
+          >
+            <Trophy className="w-4 h-4" />
+            <span className="text-xs font-bold uppercase tracking-wider">Ranks</span>
+          </button>
         </div>
       </GlassContainer>
 
       <div className="space-y-4">
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={() => onSelectMode('single')}
-          className="w-full p-6 bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 rounded-3xl flex items-center gap-6 transition-all group"
-        >
-          <div className="w-16 h-16 rounded-2xl bg-emerald-500/20 flex items-center justify-center group-hover:bg-emerald-500/30 transition-colors">
-            <Play className="w-8 h-8 text-emerald-400" />
-          </div>
-          <div className="text-left">
-            <h3 className="text-xl font-bold text-white mb-1">Single Player</h3>
-            <p className="text-white/60 text-sm">Play against the computer</p>
-          </div>
-        </motion.button>
-
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={() => onSelectMode('multi')}
-          className="w-full p-6 bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 rounded-3xl flex items-center gap-6 transition-all group"
-        >
-          <div className="w-16 h-16 rounded-2xl bg-rose-500/20 flex items-center justify-center group-hover:bg-rose-500/30 transition-colors">
-            <Users className="w-8 h-8 text-rose-400" />
-          </div>
-          <div className="text-left">
-            <h3 className="text-xl font-bold text-white mb-1">Multiplayer</h3>
-            <p className="text-white/60 text-sm">Play with friends online</p>
-          </div>
-        </motion.button>
-
+        {/* 1. Live Arena */}
         <motion.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
@@ -162,18 +140,35 @@ export function Home({ userProfile, onSelectMode }: HomeProps) {
           </div>
         </motion.button>
 
+        {/* 2. Multiplayer */}
         <motion.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
-          onClick={() => onSelectMode('leaderboard')}
+          onClick={() => onSelectMode('multi')}
           className="w-full p-6 bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 rounded-3xl flex items-center gap-6 transition-all group"
         >
-          <div className="w-16 h-16 rounded-2xl bg-amber-500/20 flex items-center justify-center group-hover:bg-amber-500/30 transition-colors">
-            <Trophy className="w-8 h-8 text-amber-400" />
+          <div className="w-16 h-16 rounded-2xl bg-rose-500/20 flex items-center justify-center group-hover:bg-rose-500/30 transition-colors">
+            <Users className="w-8 h-8 text-rose-400" />
           </div>
           <div className="text-left">
-            <h3 className="text-xl font-bold text-white mb-1">Leaderboard</h3>
-            <p className="text-white/60 text-sm">View top players globally</p>
+            <h3 className="text-xl font-bold text-white mb-1">Multiplayer</h3>
+            <p className="text-white/60 text-sm">Play with friends online</p>
+          </div>
+        </motion.button>
+
+        {/* 3. Single Player */}
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={() => onSelectMode('single')}
+          className="w-full p-6 bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 rounded-3xl flex items-center gap-6 transition-all group"
+        >
+          <div className="w-16 h-16 rounded-2xl bg-emerald-500/20 flex items-center justify-center group-hover:bg-emerald-500/30 transition-colors">
+            <Play className="w-8 h-8 text-emerald-400" />
+          </div>
+          <div className="text-left">
+            <h3 className="text-xl font-bold text-white mb-1">Single Player</h3>
+            <p className="text-white/60 text-sm">Play against the computer</p>
           </div>
         </motion.button>
       </div>
