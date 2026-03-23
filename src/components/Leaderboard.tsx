@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { GlassContainer } from './GlassContainer';
 import { UserProfile, GameState } from '../types';
-import { ArrowLeft, Trophy, History, Bot, Users } from 'lucide-react';
+import { ArrowLeft, Trophy, Bot, Users, Swords } from 'lucide-react';
 import { db } from '../firebase';
 import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 
@@ -25,10 +25,8 @@ export function Leaderboard({ onBack }: { onBack: () => void }) {
     const unsub = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as GameState & { id: string }));
       const finished = data.filter(g => g.status === 'finished');
-      // PvP: games where guestId is NOT 'AI' and guestId exists (real player)
-      setPvpMatches(finished.filter(g => g.guestId && g.guestId !== 'AI').slice(0, 5));
-      // PvE: games where guestId IS 'AI'
-      setPveMatches(finished.filter(g => g.guestId === 'AI').slice(0, 5));
+      setPvpMatches(finished.filter(g => g.guestId && g.guestId !== 'AI').slice(0, 10));
+      setPveMatches(finished.filter(g => g.guestId === 'AI').slice(0, 10));
     });
     return () => unsub();
   }, []);
@@ -58,50 +56,11 @@ export function Leaderboard({ onBack }: { onBack: () => void }) {
         {activeTab === 'pvp' && (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="text-center mb-8">
-              <Trophy className="w-12 h-12 mx-auto text-yellow-400 mb-4" />
-              <h2 className="text-2xl font-bold text-white mb-2">Global Rankings</h2>
-              <p className="text-white/60">All Players</p>
+              <Swords className="w-12 h-12 mx-auto text-emerald-400 mb-4" />
+              <h2 className="text-2xl font-bold text-white mb-2">PvP Matches</h2>
+              <p className="text-white/60">Recent player vs player games</p>
             </div>
 
-            <div className="space-y-3 mb-10">
-              {leaders.map((user, index) => (
-                <div 
-                  key={user.id} 
-                  className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/10"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${
-                      index === 0 ? 'bg-yellow-400 text-yellow-900' :
-                      index === 1 ? 'bg-slate-300 text-slate-800' :
-                      index === 2 ? 'bg-amber-600 text-amber-100' :
-                      'bg-white/10 text-white/60'
-                    }`}>
-                      {index + 1}
-                    </div>
-                    <div>
-                      <div className="font-semibold text-white">{user.nickname}</div>
-                      <div className="text-xs text-white/50">
-                        {user.wins}W - {user.losses}L - {user.draws}D
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-xl font-bold text-emerald-400">{user.score}</div>
-                    <div className="text-xs text-white/50 uppercase tracking-wider">PTS</div>
-                  </div>
-                </div>
-              ))}
-              {leaders.length === 0 && (
-                <div className="text-center text-white/50 py-8">
-                  No players yet. Be the first!
-                </div>
-              )}
-            </div>
-
-            <div className="text-center mb-6 border-t border-white/10 pt-8">
-              <Users className="w-8 h-8 mx-auto text-emerald-400 mb-2" />
-              <h2 className="text-xl font-bold text-white mb-1">Recent PvP Matches</h2>
-            </div>
             <div className="space-y-3">
               {pvpMatches.map((match) => {
                 let resultText = '';
@@ -121,7 +80,13 @@ export function Leaderboard({ onBack }: { onBack: () => void }) {
                   </div>
                 );
               })}
-              {pvpMatches.length === 0 && <div className="text-center text-white/50 py-8">No recent PvP matches found.</div>}
+              {pvpMatches.length === 0 && (
+                <div className="text-center text-white/50 py-12">
+                  <Users className="w-10 h-10 mx-auto mb-3 opacity-40" />
+                  <p>No PvP matches yet.</p>
+                  <p className="text-xs mt-1">Play a multiplayer game to see results here!</p>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -130,12 +95,12 @@ export function Leaderboard({ onBack }: { onBack: () => void }) {
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="text-center mb-8">
               <Trophy className="w-12 h-12 mx-auto text-yellow-400 mb-4" />
-              <h2 className="text-2xl font-bold text-white mb-2">AI Rankings</h2>
-              <p className="text-white/60">Top 10 Players</p>
+              <h2 className="text-2xl font-bold text-white mb-2">Global Rankings</h2>
+              <p className="text-white/60">Top Players</p>
             </div>
 
             <div className="space-y-3 mb-10">
-              {leaders.slice(0, 10).map((user, index) => (
+              {leaders.map((user, index) => (
                 <div 
                   key={user.id} 
                   className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/10"
