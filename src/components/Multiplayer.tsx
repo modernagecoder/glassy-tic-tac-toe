@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { GlassContainer } from './GlassContainer';
 import { Board } from './Board';
 import { Player, GameState, UserProfile } from '../types';
-import { ArrowLeft, Copy, Check, Users, Loader2 } from 'lucide-react';
+import { ArrowLeft, Copy, Check, Users, Loader2, RotateCcw } from 'lucide-react';
 import { motion } from 'motion/react';
 import { db, auth } from '../firebase';
 import { collection, doc, setDoc, onSnapshot, updateDoc, serverTimestamp, increment } from 'firebase/firestore';
@@ -38,7 +38,7 @@ export function Multiplayer({ onBack, userProfile }: { onBack: () => void, userP
 
   const createGame = async () => {
     if (!userId) return;
-    const newGameId = Math.random().toString(36).substring(2, 8).toUpperCase();
+    const newGameId = String(Math.floor(100000 + Math.random() * 900000));
     const newGame: GameState = {
       hostId: userId,
       guestId: null,
@@ -66,17 +66,46 @@ export function Multiplayer({ onBack, userProfile }: { onBack: () => void, userP
     if (!userId || !joinId) return;
     
     try {
-      const gameRef = doc(db, 'games', joinId.toUpperCase());
+      const gameRef = doc(db, 'games', joinId.trim());
       await updateDoc(gameRef, {
         guestId: userId,
         guestNickname: userProfile.nickname,
         status: 'playing',
         updatedAt: serverTimestamp()
       });
-      setGameId(joinId.toUpperCase());
+      setGameId(joinId.trim());
     } catch (err) {
       console.error(err);
       setError('Failed to join game. It might be full or not exist.');
+    }
+  };
+
+  const playAgain = async () => {
+    if (!userId || !gameState) return;
+    const newGameId = String(Math.floor(100000 + Math.random() * 900000));
+    const isHost = userId === gameState.hostId;
+    const opponentId = isHost ? gameState.guestId : gameState.hostId;
+    const opponentNickname = isHost ? gameState.guestNickname : gameState.hostNickname;
+
+    const newGame: GameState = {
+      hostId: userId,
+      guestId: opponentId,
+      hostNickname: userProfile.nickname,
+      guestNickname: opponentNickname,
+      board: Array(9).fill(null),
+      turn: 'X',
+      status: 'playing',
+      winner: null,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    };
+
+    try {
+      await setDoc(doc(db, 'games', newGameId), newGame);
+      setGameId(newGameId);
+    } catch (err) {
+      console.error(err);
+      setError('Failed to start rematch');
     }
   };
 
@@ -177,11 +206,12 @@ export function Multiplayer({ onBack, userProfile }: { onBack: () => void, userP
 
             <form onSubmit={joinGame} className="flex gap-2">
               <input
-                type="text"
-                placeholder="Enter Game Code"
+                type="tel"
+                inputMode="numeric"
+                placeholder="Enter 6-digit code"
                 value={joinId}
-                onChange={(e) => setJoinId(e.target.value.toUpperCase())}
-                className="flex-1 bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-white/30 uppercase"
+                onChange={(e) => setJoinId(e.target.value.replace(/\D/g, ''))}
+                className="flex-1 bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-white/30 text-center text-lg tracking-widest font-mono"
                 maxLength={6}
               />
               <button
@@ -274,6 +304,31 @@ export function Multiplayer({ onBack, userProfile }: { onBack: () => void, userP
               onClick={handleMove} 
               disabled={!myTurn || gameState.status !== 'playing' || gameState.winner !== null} 
             />
+
+            {gameState.winner && (
+              <div className="flex gap-3 mt-6">
+                <motion.button
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={playAgain}
+                  className="flex-1 py-3 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 rounded-xl font-semibold transition-all border border-emerald-500/30 flex items-center justify-center gap-2"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  Play Again
+                </motion.button>
+                <motion.button
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 }}
+                  onClick={() => setGameState(null)}
+                  className="flex-1 py-3 bg-white/5 hover:bg-white/10 text-white/60 rounded-xl font-semibold transition-all border border-white/10"
+                >
+                  Leave Game
+                </motion.button>
+              </div>
+            )}
           </>
         )}
       </GlassContainer>

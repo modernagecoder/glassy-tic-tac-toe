@@ -443,28 +443,59 @@ export function LiveArena({ onBack, userProfile }: { onBack: () => void; userPro
             </div>
           </div>
 
-          {/* Challenge blips on globe */}
-          {otherChallenges.slice(0, 5).map((ch, i) => {
-            const angle = (i / Math.max(otherChallenges.length, 1)) * 360;
-            const radius = 35;
-            const x = 50 + radius * Math.cos((angle * Math.PI) / 180);
-            const y = 50 + radius * Math.sin((angle * Math.PI) / 180);
-            return (
-              <motion.div
-                key={ch.id}
-                initial={{ scale: 0, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0, opacity: 0 }}
-                className="absolute w-3 h-3 rounded-full bg-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.8)] arena-pulse-dot"
-                style={{
-                  left: `${x}%`,
-                  top: `${y}%`,
-                  transform: 'translate(-50%, -50%)',
-                  animationDelay: `${i * 0.3}s`,
-                }}
-              />
-            );
-          })}
+          {/* YOUR challenge blip on globe */}
+          {isBroadcasting && (
+            <motion.div
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="absolute flex flex-col items-center"
+              style={{ left: '50%', top: '22%', transform: 'translate(-50%, -50%)', zIndex: 10 }}
+            >
+              <div className="relative">
+                <div className="w-4 h-4 rounded-full bg-cyan-400 shadow-[0_0_16px_rgba(34,211,238,0.9)] arena-pulse-dot" />
+                <div className="absolute inset-0 rounded-full bg-cyan-400/40 animate-ping" />
+              </div>
+              <div className="mt-1 px-2 py-0.5 rounded-md bg-cyan-500/30 border border-cyan-400/40 backdrop-blur-sm">
+                <span className="text-[9px] font-bold text-cyan-300 uppercase tracking-wider">YOU</span>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Other players' challenge blips on globe */}
+          <AnimatePresence>
+            {otherChallenges.slice(0, 6).map((ch, i) => {
+              // Position blips in interesting spots across the globe face
+              const positions = [
+                { x: 30, y: 35 }, { x: 70, y: 30 }, { x: 25, y: 65 },
+                { x: 72, y: 62 }, { x: 50, y: 75 }, { x: 55, y: 40 },
+              ];
+              const pos = positions[i % positions.length];
+              return (
+                <motion.div
+                  key={ch.id}
+                  initial={{ scale: 0, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0, opacity: 0 }}
+                  transition={{ delay: i * 0.1, type: 'spring', stiffness: 300 }}
+                  className="absolute flex flex-col items-center cursor-pointer group/blip"
+                  style={{ left: `${pos.x}%`, top: `${pos.y}%`, transform: 'translate(-50%, -50%)', zIndex: 5 }}
+                  onClick={() => acceptChallenge(ch)}
+                >
+                  <div className="relative">
+                    <div className="w-3 h-3 rounded-full bg-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.8)] arena-pulse-dot"
+                      style={{ animationDelay: `${i * 0.3}s` }}
+                    />
+                  </div>
+                  <div className="mt-0.5 px-1.5 py-px rounded bg-amber-500/25 border border-amber-400/30 backdrop-blur-sm
+                                  group-hover/blip:bg-amber-500/40 group-hover/blip:border-amber-400/50 transition-all">
+                    <span className="text-[8px] font-bold text-amber-300 uppercase tracking-wider whitespace-nowrap">
+                      {ch.hostNickname.length > 8 ? ch.hostNickname.slice(0, 8) + '…' : ch.hostNickname}
+                    </span>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
         </div>
       </motion.div>
 
