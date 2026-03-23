@@ -22,3 +22,14 @@ export interface GameState {
   createdAt: any;
   updatedAt: any;
 }
+
+export interface ChallengeRequest {
+  id?: string;
+  hostId: string;
+  hostNickname: string;
+  gameId: string;
+  status: 'open' | 'accepted' | 'expired';
+  createdAt: any;
+  acceptedBy?: string;
+  acceptedByNickname?: string;
+}

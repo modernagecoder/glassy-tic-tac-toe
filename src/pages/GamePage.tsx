@@ -6,6 +6,7 @@ import { Home } from '../components/Home';
 import { Singleplayer } from '../components/Singleplayer';
 import { Multiplayer } from '../components/Multiplayer';
 import { Leaderboard } from '../components/Leaderboard';
+import { LiveArena } from '../components/LiveArena';
 import { GlassContainer } from '../components/GlassContainer';
 import { Loader2, Gamepad2 } from 'lucide-react';
 
@@ -15,7 +16,7 @@ export function Game() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [nicknameInput, setNicknameInput] = useState('');
-  const [mode, setMode] = useState<'home' | 'single' | 'multi' | 'leaderboard'>('home');
+  const [mode, setMode] = useState<'home' | 'single' | 'multi' | 'arena' | 'leaderboard'>('home');
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
@@ -139,6 +140,7 @@ export function Game() {
         {mode === 'home' && <Home userProfile={profile} onSelectMode={setMode} />}
         {mode === 'single' && <Singleplayer onBack={() => setMode('home')} userProfile={profile} />}
         {mode === 'multi' && <Multiplayer onBack={() => setMode('home')} userProfile={profile} />}
+        {mode === 'arena' && <LiveArena onBack={() => setMode('home')} userProfile={profile} />}
         {mode === 'leaderboard' && <Leaderboard onBack={() => setMode('home')} />}
       </div>
     </div>

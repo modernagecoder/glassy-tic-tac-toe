@@ -10,3 +10,118 @@ body {
   -webkit-tap-highlight-color: transparent;
   user-select: none;
 }
+
+/* ═══════════════════════════════════════════════════════
+   LIVE ARENA ANIMATIONS
+   ═══════════════════════════════════════════════════════ */
+
+/* Pulsing dot indicator */
+@keyframes arena-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.5); }
+}
+.arena-pulse-dot {
+  animation: arena-pulse 2s ease-in-out infinite;
+}
+
+/* Star twinkling */
+@keyframes arena-twinkle {
+  0%, 100% { opacity: 0.2; }
+  50% { opacity: 1; }
+}
+.arena-twinkle {
+  animation: arena-twinkle 3s ease-in-out infinite;
+}
+
+/* Globe sphere subtle rotate */
+@keyframes arena-globe-rotate {
+  0% { filter: hue-rotate(0deg); }
+  100% { filter: hue-rotate(20deg); }
+}
+.arena-globe-sphere {
+  animation: arena-globe-rotate 10s ease-in-out infinite alternate;
+}
+
+/* Glow pulse for outer ring */
+@keyframes arena-glow-pulse {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.05); }
+}
+.arena-glow-pulse {
+  animation: arena-glow-pulse 4s ease-in-out infinite;
+}
+
+/* Surface shimmer */
+@keyframes arena-shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+.arena-shimmer {
+  animation: arena-shimmer 6s linear infinite;
+}
+
+/* Orbital ring rotation */
+@keyframes arena-orbit {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+.arena-orbit {
+  animation: arena-orbit 20s linear infinite;
+}
+
+/* Reverse orbital ring */
+@keyframes arena-orbit-reverse {
+  0% { transform: rotate(360deg); }
+  100% { transform: rotate(0deg); }
+}
+.arena-orbit-reverse {
+  animation: arena-orbit-reverse 30s linear infinite;
+}
+
+/* Globe latitude lines subtle float */
+.arena-lat-line {
+  animation: arena-twinkle 5s ease-in-out infinite;
+}
+
+/* Rotating longitude lines */
+@keyframes arena-rotate-globe-line {
+  0% { transform: translateX(-50%) rotateY(0deg); }
+  100% { transform: translateX(-50%) rotateY(360deg); }
+}
+.arena-rotate-globe {
+  animation: arena-rotate-globe-line 15s linear infinite;
+}
+
+/* Radar broadcast rings */
+@keyframes arena-radar {
+  0% {
+    transform: scale(1);
+    opacity: 0.8;
+    border-width: 2px;
+  }
+  100% {
+    transform: scale(4);
+    opacity: 0;
+    border-width: 0.5px;
+  }
+}
+.arena-radar-ring {
+  border: 2px solid rgba(34, 211, 238, 0.5);
+  border-radius: 50%;
+  animation: arena-radar 2.1s ease-out infinite;
+}
+
+/* Custom scrollbar for challenge list */
+.arena-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.arena-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.arena-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+.arena-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}

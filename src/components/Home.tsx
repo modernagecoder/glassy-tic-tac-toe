@@ -1,14 +1,14 @@
 import { useState } from 'react';
 import { GlassContainer } from './GlassContainer';
 import { UserProfile } from '../types';
-import { User, Users, Trophy, Play, Edit2, Check, X, Loader2 } from 'lucide-react';
+import { User, Users, Trophy, Play, Edit2, Check, X, Loader2, Globe } from 'lucide-react';
 import { motion } from 'motion/react';
 import { auth, db } from '../firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 
 interface HomeProps {
   userProfile: UserProfile;
-  onSelectMode: (mode: 'single' | 'multi' | 'leaderboard') => void;
+  onSelectMode: (mode: 'single' | 'multi' | 'arena' | 'leaderboard') => void;
 }
 
 export function Home({ userProfile, onSelectMode }: HomeProps) {
@@ -129,6 +129,36 @@ export function Home({ userProfile, onSelectMode }: HomeProps) {
           <div className="text-left">
             <h3 className="text-xl font-bold text-white mb-1">Multiplayer</h3>
             <p className="text-white/60 text-sm">Play with friends online</p>
+          </div>
+        </motion.button>
+
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={() => onSelectMode('arena')}
+          className="w-full p-6 bg-gradient-to-r from-cyan-500/10 to-blue-600/10 hover:from-cyan-500/20 hover:to-blue-600/20 backdrop-blur-md border border-cyan-400/30 hover:border-cyan-400/50 rounded-3xl flex items-center gap-6 transition-all group relative overflow-hidden"
+        >
+          {/* NEW badge */}
+          <div className="absolute top-3 right-3 flex items-center gap-1.5">
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-cyan-400"></span>
+            </span>
+            <span className="text-[10px] font-extrabold tracking-widest text-cyan-400 uppercase bg-cyan-400/10 px-2 py-0.5 rounded-full border border-cyan-400/30">NEW</span>
+          </div>
+          {/* LIVE indicator */}
+          <div className="absolute bottom-3 right-3">
+            <span className="text-[10px] font-bold tracking-wider text-emerald-400 uppercase bg-emerald-400/10 px-2 py-0.5 rounded-full border border-emerald-400/20 flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              LIVE
+            </span>
+          </div>
+          <div className="w-16 h-16 rounded-2xl bg-cyan-500/20 flex items-center justify-center group-hover:bg-cyan-500/30 transition-colors relative">
+            <Globe className="w-8 h-8 text-cyan-400" />
+          </div>
+          <div className="text-left">
+            <h3 className="text-xl font-bold text-white mb-1">Live Arena</h3>
+            <p className="text-white/60 text-sm">Challenge anyone worldwide in real-time</p>
           </div>
         </motion.button>
 
