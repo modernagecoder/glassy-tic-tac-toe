@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { GlassContainer } from './GlassContainer';
 import { Board } from './Board';
-import { Player } from '../types';
+import { Player, UserProfile } from '../types';
 import { ArrowLeft, RotateCcw, Trophy } from 'lucide-react';
 import { motion } from 'motion/react';
 import { db, auth } from '../firebase';
-import { doc, updateDoc, increment } from 'firebase/firestore';
+import { doc, updateDoc, increment, setDoc, serverTimestamp } from 'firebase/firestore';
 
 const WINNING_COMBINATIONS = [
   [0, 1, 2], [3, 4, 5], [6, 7, 8], // Rows
@@ -13,7 +13,7 @@ const WINNING_COMBINATIONS = [
   [0, 4, 8], [2, 4, 6]             // Diagonals
 ];
 
-export function Singleplayer({ onBack }: { onBack: () => void }) {
+export function Singleplayer({ onBack, userProfile }: { onBack: () => void, userProfile: UserProfile }) {
   const [board, setBoard] = useState<Player[]>(Array(9).fill(null));
   const [isPlayerTurn, setIsPlayerTurn] = useState(true);
   const [winner, setWinner] = useState<Player | 'draw'>(null);
@@ -29,7 +29,7 @@ export function Singleplayer({ onBack }: { onBack: () => void }) {
     return null;
   };
 
-  const handleWin = (win: Player | 'draw') => {
+  const handleWin = async (win: Player | 'draw') => {
     setWinner(win);
     const userId = auth.currentUser?.uid;
     if (!userId) return;
@@ -40,6 +40,25 @@ export function Singleplayer({ onBack }: { onBack: () => void }) {
       updateDoc(userRef, { wins: increment(1), score: increment(20) }).catch(console.error);
     } else if (win === 'O') {
       updateDoc(userRef, { losses: increment(1) }).catch(console.error);
+    }
+
+    const newGameId = Math.random().toString(36).substring(2, 10).toUpperCase();
+    const gameLog = {
+      hostId: userId,
+      guestId: 'AI',
+      hostNickname: userProfile.nickname,
+      guestNickname: 'Computer AI',
+      board: board,
+      turn: 'O',
+      status: 'finished',
+      winner: win === 'draw' ? 'draw' : win === 'X' ? userId : 'AI',
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    };
+    try {
+      await setDoc(doc(db, 'games', newGameId), gameLog);
+    } catch (err) {
+      console.error(err);
     }
   };
 

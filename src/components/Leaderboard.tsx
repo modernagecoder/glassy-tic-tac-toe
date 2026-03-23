@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
 import { GlassContainer } from './GlassContainer';
 import { UserProfile, GameState } from '../types';
-import { ArrowLeft, Trophy, History } from 'lucide-react';
+import { ArrowLeft, Trophy, History, Bot } from 'lucide-react';
 import { db } from '../firebase';
 import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 
 export function Leaderboard({ onBack }: { onBack: () => void }) {
   const [leaders, setLeaders] = useState<(UserProfile & { id: string })[]>([]);
-  const [recentMatches, setRecentMatches] = useState<(GameState & { id: string })[]>([]);
+  const [pvpMatches, setPvpMatches] = useState<(GameState & { id: string })[]>([]);
+  const [pveMatches, setPveMatches] = useState<(GameState & { id: string })[]>([]);
 
   useEffect(() => {
     const q = query(collection(db, 'users'), orderBy('score', 'desc'), limit(10));
@@ -19,10 +20,12 @@ export function Leaderboard({ onBack }: { onBack: () => void }) {
   }, []);
 
   useEffect(() => {
-    const q = query(collection(db, 'games'), orderBy('updatedAt', 'desc'), limit(15));
+    const q = query(collection(db, 'games'), orderBy('updatedAt', 'desc'), limit(35));
     const unsub = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as GameState & { id: string }));
-      setRecentMatches(data.filter(g => g.status === 'finished' && g.guestNickname).slice(0, 5));
+      const finished = data.filter(g => g.status === 'finished');
+      setPvpMatches(finished.filter(g => g.guestId !== 'AI').slice(0, 5));
+      setPveMatches(finished.filter(g => g.guestId === 'AI').slice(0, 5));
     });
     return () => unsub();
   }, []);
@@ -78,11 +81,11 @@ export function Leaderboard({ onBack }: { onBack: () => void }) {
 
         <div className="mt-10 text-center mb-6">
           <History className="w-8 h-8 mx-auto text-emerald-400 mb-2" />
-          <h2 className="text-xl font-bold text-white mb-1">Recent Matches</h2>
+          <h2 className="text-xl font-bold text-white mb-1">Player vs Player</h2>
         </div>
 
         <div className="space-y-3">
-          {recentMatches.map((match) => {
+          {pvpMatches.map((match) => {
             let resultText = '';
             if (match.winner === 'draw') resultText = 'Draw';
             else if (match.winner === match.hostId) resultText = `${match.hostNickname} Wins`;
@@ -104,7 +107,42 @@ export function Leaderboard({ onBack }: { onBack: () => void }) {
               </div>
             );
           })}
-          {recentMatches.length === 0 && (
+          {pvpMatches.length === 0 && (
+            <div className="text-center text-white/50 py-8">
+              No recent matches found.
+            </div>
+          )}
+        </div>
+
+        <div className="mt-10 text-center mb-6">
+          <Bot className="w-8 h-8 mx-auto text-indigo-400 mb-2" />
+          <h2 className="text-xl font-bold text-white mb-1">Player vs AI</h2>
+        </div>
+
+        <div className="space-y-3">
+          {pveMatches.map((match) => {
+            let resultText = '';
+            if (match.winner === 'draw') resultText = 'Draw';
+            else if (match.winner === match.hostId) resultText = `${match.hostNickname} Wins`;
+            else resultText = `${match.guestNickname} Wins`;
+
+            return (
+              <div 
+                key={match.id} 
+                className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/10"
+              >
+                <div className="text-sm font-semibold text-white truncate max-w-[70%]">
+                  <span className={match.winner === match.hostId ? 'text-emerald-400' : 'text-white'}>{match.hostNickname}</span>
+                  <span className="text-white/40 mx-3">vs</span>
+                  <span className={match.winner === match.guestId ? 'text-rose-400' : 'text-white'}>{match.guestNickname}</span>
+                </div>
+                <div className="text-xs font-bold px-3 py-1 bg-white/10 rounded-full text-white/80 whitespace-nowrap">
+                  {resultText}
+                </div>
+              </div>
+            );
+          })}
+          {pveMatches.length === 0 && (
             <div className="text-center text-white/50 py-8">
               No recent matches found.
             </div>

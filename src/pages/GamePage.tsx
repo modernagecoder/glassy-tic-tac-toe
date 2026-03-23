@@ -137,7 +137,7 @@ export function Game() {
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-indigo-900/20 via-slate-950 to-slate-950 -z-10"></div>
       <div className="w-full max-w-4xl mx-auto">
         {mode === 'home' && <Home userProfile={profile} onSelectMode={setMode} />}
-        {mode === 'single' && <Singleplayer onBack={() => setMode('home')} />}
+        {mode === 'single' && <Singleplayer onBack={() => setMode('home')} userProfile={profile} />}
         {mode === 'multi' && <Multiplayer onBack={() => setMode('home')} userProfile={profile} />}
         {mode === 'leaderboard' && <Leaderboard onBack={() => setMode('home')} />}
       </div>
