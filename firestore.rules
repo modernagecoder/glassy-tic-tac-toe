@@ -71,7 +71,7 @@ service cloud.firestore {
       return hasOnlyAllowedFields(['hostId', 'guestId', 'hostNickname', 'guestNickname', 'board', 'turn', 'status', 'winner', 'createdAt', 'updatedAt']) &&
              data.hostId is string && data.hostId.size() > 0 && data.hostId.size() <= 50 &&
              data.hostNickname is string && data.hostNickname.size() > 0 && data.hostNickname.size() <= 20 &&
-             data.board is list && data.board.size() == 9 &&
+             data.board is list && data.board.size() in [9, 16, 25] &&
              data.turn in ['X', 'O'] &&
              data.status in ['waiting', 'playing', 'finished'] &&
              data.createdAt is timestamp &&
@@ -111,7 +111,7 @@ service cloud.firestore {
       allow create: if isAuthenticated() && 
                        isValidGame(request.resource.data) &&
                        request.resource.data.hostId == request.auth.uid &&
-                       request.resource.data.status == 'waiting' &&
+                       request.resource.data.status in ['waiting', 'playing'] &&
                        request.resource.data.turn == 'X' &&
                        (!('guestId' in request.resource.data) || request.resource.data.guestId == null) &&
                        (!('winner' in request.resource.data) || request.resource.data.winner == null);

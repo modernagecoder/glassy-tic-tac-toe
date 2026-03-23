@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { GlassContainer } from './GlassContainer';
 import { Board } from './Board';
-import { Player, GameState, UserProfile, ChallengeRequest } from '../types';
+import { Player, GameState, UserProfile, ChallengeRequest, BoardSize, BOARD_CONFIGS, generateWinCombinations } from '../types';
 import { ArrowLeft, Globe, Zap, Swords, Radio, Loader2, Wifi, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { db, auth } from '../firebase';
@@ -9,12 +9,6 @@ import {
   collection, doc, setDoc, onSnapshot, updateDoc, deleteDoc,
   serverTimestamp, query, where, orderBy, limit, increment
 } from 'firebase/firestore';
-
-const WINNING_COMBINATIONS = [
-  [0, 1, 2], [3, 4, 5], [6, 7, 8],
-  [0, 3, 6], [1, 4, 7], [2, 5, 8],
-  [0, 4, 8], [2, 4, 6]
-];
 
 // Generate stars for the background
 const stars = Array.from({ length: 80 }, (_, i) => ({
@@ -43,12 +37,19 @@ export function LiveArena({ onBack, userProfile }: { onBack: () => void; userPro
   const [challenges, setChallenges] = useState<ChallengeRequest[]>([]);
   const [myChallenge, setMyChallenge] = useState<ChallengeRequest | null>(null);
   const [isBroadcasting, setIsBroadcasting] = useState(false);
+  const [selectedSize, setSelectedSize] = useState<BoardSize>(3);
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [gameId, setGameId] = useState<string>('');
   const [isMyTurn, setIsMyTurn] = useState(false);
   const [timeNow, setTimeNow] = useState(Date.now());
 
   const userId = auth.currentUser?.uid;
+
+  // Detect board size from game state
+  const gameBoardSize: BoardSize = gameState?.board
+    ? ([3, 4, 5].find(s => s * s === gameState.board.length) as BoardSize) || 3
+    : 3;
+  const winCombos = useMemo(() => generateWinCombinations(gameBoardSize), [gameBoardSize]);
 
   // Update time display every 5 seconds
   useEffect(() => {
@@ -134,20 +135,21 @@ export function LiveArena({ onBack, userProfile }: { onBack: () => void; userPro
     }
   }, [gameState?.status, gameState?.winner, gameId, userId]);
 
-  const sendChallenge = async () => {
+  const sendChallenge = async (size: BoardSize) => {
     if (!userId || isBroadcasting) return;
     setIsBroadcasting(true);
+    setSelectedSize(size);
 
+    const cfg = BOARD_CONFIGS[size];
     const newGameId = Math.random().toString(36).substring(2, 8).toUpperCase();
     const challengeId = Math.random().toString(36).substring(2, 10);
 
-    // Create the game
     const newGame: GameState = {
       hostId: userId,
       guestId: null,
       hostNickname: userProfile.nickname,
       guestNickname: null,
-      board: Array(9).fill(null),
+      board: Array(cfg.cells).fill(null),
       turn: 'X',
       status: 'waiting',
       winner: null,
@@ -155,13 +157,13 @@ export function LiveArena({ onBack, userProfile }: { onBack: () => void; userPro
       updatedAt: serverTimestamp(),
     };
 
-    // Create the challenge
     const newChallenge: ChallengeRequest = {
       hostId: userId,
       hostNickname: userProfile.nickname,
       gameId: newGameId,
       status: 'open',
       createdAt: serverTimestamp(),
+      boardSize: size,
     };
 
     try {
@@ -211,8 +213,9 @@ export function LiveArena({ onBack, userProfile }: { onBack: () => void; userPro
   };
 
   const checkWinner = (squares: Player[]) => {
-    for (const [a, b, c] of WINNING_COMBINATIONS) {
-      if (squares[a] && squares[a] === squares[b] && squares[a] === squares[c]) return squares[a];
+    for (const combo of winCombos) {
+      const first = squares[combo[0]];
+      if (first && combo.every(i => squares[i] === first)) return first;
     }
     if (!squares.includes(null)) return 'draw';
     return null;
@@ -311,6 +314,7 @@ export function LiveArena({ onBack, userProfile }: { onBack: () => void; userPro
             board={gameState.board}
             onClick={handleMove}
             disabled={!myTurn || gameState.status !== 'playing' || gameState.winner !== null}
+            size={gameBoardSize}
           />
 
           {gameState.winner && (
@@ -489,8 +493,9 @@ export function LiveArena({ onBack, userProfile }: { onBack: () => void; userPro
                   <div className="mt-0.5 px-1.5 py-px rounded bg-amber-500/25 border border-amber-400/30 backdrop-blur-sm
                                   group-hover/blip:bg-amber-500/40 group-hover/blip:border-amber-400/50 transition-all">
                     <span className="text-[8px] font-bold text-amber-300 uppercase tracking-wider whitespace-nowrap">
-                      {ch.hostNickname.length > 8 ? ch.hostNickname.slice(0, 8) + '…' : ch.hostNickname}
+                      {ch.hostNickname.length > 6 ? ch.hostNickname.slice(0, 6) + '…' : ch.hostNickname}
                     </span>
+                    <span className="text-[7px] text-amber-400/60 ml-0.5">{BOARD_CONFIGS[ch.boardSize || 3].emoji}</span>
                   </div>
                 </motion.div>
               );
@@ -501,24 +506,38 @@ export function LiveArena({ onBack, userProfile }: { onBack: () => void; userPro
 
       {/* Action Section */}
       <div className="space-y-4">
-        {/* Send / Cancel Challenge */}
+        {/* Send Challenge with size selection / Cancel */}
         {!isBroadcasting ? (
-          <motion.button
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={sendChallenge}
-            className="w-full py-5 rounded-2xl font-bold text-lg transition-all relative overflow-hidden group
-                       bg-gradient-to-r from-cyan-500/80 to-blue-600/80 hover:from-cyan-500 hover:to-blue-600
-                       text-white shadow-[0_0_30px_rgba(34,211,238,0.3)] border border-cyan-400/30"
+            className="space-y-2"
           >
-            <span className="relative z-10 flex items-center justify-center gap-3">
-              <Zap className="w-6 h-6" />
-              Send Challenge
-            </span>
-            <div className="absolute inset-0 bg-gradient-to-r from-cyan-400/0 via-white/10 to-cyan-400/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
-          </motion.button>
+            <div className="text-center text-white/50 text-xs uppercase tracking-widest font-semibold mb-1">Send Challenge</div>
+            <div className="grid grid-cols-3 gap-2">
+              {([3, 4, 5] as BoardSize[]).map(size => {
+                const cfg = BOARD_CONFIGS[size];
+                const colorMap: Record<string, string> = {
+                  emerald: 'from-emerald-500/60 to-emerald-600/60 hover:from-emerald-500/80 hover:to-emerald-600/80 border-emerald-400/30',
+                  amber: 'from-amber-500/60 to-amber-600/60 hover:from-amber-500/80 hover:to-amber-600/80 border-amber-400/30',
+                  rose: 'from-rose-500/60 to-rose-600/60 hover:from-rose-500/80 hover:to-rose-600/80 border-rose-400/30',
+                };
+                return (
+                  <motion.button
+                    key={size}
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => sendChallenge(size)}
+                    className={`py-3 px-2 rounded-xl font-bold text-sm transition-all bg-gradient-to-r text-white border ${colorMap[cfg.color]}`}
+                  >
+                    <div className="text-base">{cfg.emoji}</div>
+                    <div className="text-xs mt-0.5">{cfg.label}</div>
+                    <div className="text-[9px] text-white/50 mt-0.5">{size}×{size}</div>
+                  </motion.button>
+                );
+              })}
+            </div>
+          </motion.div>
         ) : (
           <motion.div
             initial={{ opacity: 0 }}
@@ -596,7 +615,14 @@ export function LiveArena({ onBack, userProfile }: { onBack: () => void; userPro
 
                       <div>
                         <div className="text-white font-bold text-base">{ch.hostNickname}</div>
-                        <div className="text-white/40 text-xs">{timeAgo(ch.createdAt)}</div>
+                        <div className="text-white/40 text-xs flex items-center gap-2">
+                          <span>{timeAgo(ch.createdAt)}</span>
+                          <span className="text-white/30">•</span>
+                          <span className={`font-bold ${
+                            (ch.boardSize || 3) === 3 ? 'text-emerald-400' :
+                            (ch.boardSize || 3) === 4 ? 'text-amber-400' : 'text-rose-400'
+                          }`}>{BOARD_CONFIGS[ch.boardSize || 3].emoji} {BOARD_CONFIGS[ch.boardSize || 3].label}</span>
+                        </div>
                       </div>
                     </div>
 

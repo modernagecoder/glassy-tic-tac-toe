@@ -1,19 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { GlassContainer } from './GlassContainer';
 import { Board } from './Board';
-import { Player, GameState, UserProfile } from '../types';
+import { Player, GameState, UserProfile, BoardSize, BOARD_CONFIGS, generateWinCombinations } from '../types';
 import { ArrowLeft, Copy, Check, Users, Loader2, RotateCcw } from 'lucide-react';
 import { motion } from 'motion/react';
 import { db, auth } from '../firebase';
 import { collection, doc, setDoc, onSnapshot, updateDoc, serverTimestamp, increment } from 'firebase/firestore';
 
-const WINNING_COMBINATIONS = [
-  [0, 1, 2], [3, 4, 5], [6, 7, 8],
-  [0, 3, 6], [1, 4, 7], [2, 5, 8],
-  [0, 4, 8], [2, 4, 6]
-];
-
 export function Multiplayer({ onBack, userProfile }: { onBack: () => void, userProfile: UserProfile }) {
+  const [boardSize, setBoardSize] = useState<BoardSize | null>(null);
   const [gameId, setGameId] = useState<string>('');
   const [joinId, setJoinId] = useState<string>('');
   const [gameState, setGameState] = useState<GameState | null>(null);
@@ -21,6 +16,14 @@ export function Multiplayer({ onBack, userProfile }: { onBack: () => void, userP
   const [error, setError] = useState('');
 
   const userId = auth.currentUser?.uid;
+
+  // Detect board size from game state
+  const detectedSize: BoardSize = gameState?.board
+    ? ([3, 4, 5].find(s => s * s === gameState.board.length) as BoardSize) || 3
+    : boardSize || 3;
+
+  const config = BOARD_CONFIGS[detectedSize];
+  const winCombos = useMemo(() => generateWinCombinations(detectedSize), [detectedSize]);
 
   useEffect(() => {
     if (!gameId) return;
@@ -36,22 +39,24 @@ export function Multiplayer({ onBack, userProfile }: { onBack: () => void, userP
     return () => unsub();
   }, [gameId]);
 
-  const createGame = async () => {
+  const createGame = async (size: BoardSize) => {
     if (!userId) return;
+    setBoardSize(size);
     const newGameId = String(Math.floor(100000 + Math.random() * 900000));
+    const cfg = BOARD_CONFIGS[size];
     const newGame: GameState = {
       hostId: userId,
       guestId: null,
       hostNickname: userProfile.nickname,
       guestNickname: null,
-      board: Array(9).fill(null),
+      board: Array(cfg.cells).fill(null),
       turn: 'X',
       status: 'waiting',
       winner: null,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     };
-    
+
     try {
       await setDoc(doc(db, 'games', newGameId), newGame);
       setGameId(newGameId);
@@ -64,7 +69,7 @@ export function Multiplayer({ onBack, userProfile }: { onBack: () => void, userP
   const joinGame = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!userId || !joinId) return;
-    
+
     try {
       const gameRef = doc(db, 'games', joinId.trim());
       await updateDoc(gameRef, {
@@ -92,7 +97,7 @@ export function Multiplayer({ onBack, userProfile }: { onBack: () => void, userP
       guestId: opponentId,
       hostNickname: userProfile.nickname,
       guestNickname: opponentNickname,
-      board: Array(9).fill(null),
+      board: Array(detectedSize * detectedSize).fill(null),
       turn: 'X',
       status: 'playing',
       winner: null,
@@ -110,11 +115,9 @@ export function Multiplayer({ onBack, userProfile }: { onBack: () => void, userP
   };
 
   const checkWinner = (squares: Player[]) => {
-    for (let i = 0; i < WINNING_COMBINATIONS.length; i++) {
-      const [a, b, c] = WINNING_COMBINATIONS[i];
-      if (squares[a] && squares[a] === squares[b] && squares[a] === squares[c]) {
-        return squares[a];
-      }
+    for (const combo of winCombos) {
+      const first = squares[combo[0]];
+      if (first && combo.every(i => squares[i] === first)) return first;
     }
     if (!squares.includes(null)) return 'draw';
     return null;
@@ -122,19 +125,17 @@ export function Multiplayer({ onBack, userProfile }: { onBack: () => void, userP
 
   const handleMove = async (index: number) => {
     if (!gameState || !userId || gameState.status !== 'playing' || gameState.winner) return;
-    
+
     const isHost = userId === gameState.hostId;
     const isGuest = userId === gameState.guestId;
-    
     if ((isHost && gameState.turn !== 'X') || (isGuest && gameState.turn !== 'O')) return;
     if (gameState.board[index]) return;
 
     const newBoard = [...gameState.board];
     newBoard[index] = gameState.turn;
-    
     const win = checkWinner(newBoard);
     const nextTurn = gameState.turn === 'X' ? 'O' : 'X';
-    
+
     const updates: Partial<GameState> = {
       board: newBoard,
       turn: nextTurn,
@@ -151,7 +152,6 @@ export function Multiplayer({ onBack, userProfile }: { onBack: () => void, userP
 
   useEffect(() => {
     if (gameState?.status === 'finished' && gameState.winner) {
-      // Only update once per game finish
       const hasUpdatedStats = localStorage.getItem(`game_${gameId}_stats_updated`);
       if (!hasUpdatedStats && userId) {
         const userRef = doc(db, 'users', userId);
@@ -174,13 +174,14 @@ export function Multiplayer({ onBack, userProfile }: { onBack: () => void, userP
     setTimeout(() => setCopied(false), 2000);
   };
 
+  // ─── LOBBY: CHOOSE SIZE OR JOIN ─────────────────────────────────
   if (!gameState) {
     return (
       <div className="w-full max-w-md mx-auto">
         <button onClick={onBack} className="mb-6 flex items-center text-white/70 hover:text-white transition-colors">
           <ArrowLeft className="w-5 h-5 mr-2" /> Back to Menu
         </button>
-        
+
         <GlassContainer>
           <div className="text-center mb-8">
             <Users className="w-12 h-12 mx-auto text-white/80 mb-4" />
@@ -190,44 +191,61 @@ export function Multiplayer({ onBack, userProfile }: { onBack: () => void, userP
 
           {error && <div className="mb-4 p-3 bg-red-500/20 border border-red-500/50 rounded-xl text-red-200 text-sm text-center">{error}</div>}
 
-          <div className="space-y-6">
-            <button
-              onClick={createGame}
-              className="w-full py-4 bg-white/10 hover:bg-white/20 text-white rounded-xl font-semibold transition-all border border-white/10"
-            >
-              Create New Game
-            </button>
-            
-            <div className="relative flex items-center py-2">
-              <div className="flex-grow border-t border-white/10"></div>
-              <span className="flex-shrink-0 mx-4 text-white/40 text-sm">OR</span>
-              <div className="flex-grow border-t border-white/10"></div>
+          {/* Create game with size selection */}
+          <div className="mb-6">
+            <div className="text-sm text-white/50 uppercase tracking-widest font-semibold mb-3 text-center">Create New Game</div>
+            <div className="space-y-2">
+              {([3, 4, 5] as BoardSize[]).map((size) => {
+                const cfg = BOARD_CONFIGS[size];
+                const colors: Record<string, string> = {
+                  emerald: 'bg-emerald-500/15 hover:bg-emerald-500/25 border-emerald-500/25 text-emerald-400',
+                  amber: 'bg-amber-500/15 hover:bg-amber-500/25 border-amber-500/25 text-amber-400',
+                  rose: 'bg-rose-500/15 hover:bg-rose-500/25 border-rose-500/25 text-rose-400',
+                };
+                return (
+                  <button
+                    key={size}
+                    onClick={() => createGame(size)}
+                    className={`w-full p-4 rounded-xl border transition-all text-left flex items-center justify-between ${colors[cfg.color]}`}
+                  >
+                    <span className="font-bold">{cfg.emoji} {cfg.label}</span>
+                    <span className="text-white/40 text-xs">{cfg.rules}</span>
+                  </button>
+                );
+              })}
             </div>
-
-            <form onSubmit={joinGame} className="flex gap-2">
-              <input
-                type="tel"
-                inputMode="numeric"
-                placeholder="Enter 6-digit code"
-                value={joinId}
-                onChange={(e) => setJoinId(e.target.value.replace(/\D/g, ''))}
-                className="flex-1 bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-white/30 text-center text-lg tracking-widest font-mono"
-                maxLength={6}
-              />
-              <button
-                type="submit"
-                disabled={joinId.length !== 6}
-                className="px-6 bg-emerald-500/80 hover:bg-emerald-500 text-white rounded-xl font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Join
-              </button>
-            </form>
           </div>
+
+          <div className="relative flex items-center py-2">
+            <div className="flex-grow border-t border-white/10"></div>
+            <span className="flex-shrink-0 mx-4 text-white/40 text-sm">OR</span>
+            <div className="flex-grow border-t border-white/10"></div>
+          </div>
+
+          <form onSubmit={joinGame} className="flex gap-2 mt-4">
+            <input
+              type="tel"
+              inputMode="numeric"
+              placeholder="Enter 6-digit code"
+              value={joinId}
+              onChange={(e) => setJoinId(e.target.value.replace(/\D/g, ''))}
+              className="flex-1 bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-white/30 text-center text-lg tracking-widest font-mono"
+              maxLength={6}
+            />
+            <button
+              type="submit"
+              disabled={joinId.length !== 6}
+              className="px-6 bg-emerald-500/80 hover:bg-emerald-500 text-white rounded-xl font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Join
+            </button>
+          </form>
         </GlassContainer>
       </div>
     );
   }
 
+  // ─── GAME VIEW ─────────────────────────────────────────────
   const isHost = userId === gameState.hostId;
   const mySymbol = isHost ? 'X' : 'O';
   const opponentSymbol = isHost ? 'O' : 'X';
@@ -243,12 +261,23 @@ export function Multiplayer({ onBack, userProfile }: { onBack: () => void, userP
       </button>
 
       <GlassContainer>
+        {/* Mode badge */}
+        <div className="text-center mb-3">
+          <span className={`text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-full border ${
+            config.color === 'emerald' ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' :
+            config.color === 'amber' ? 'text-amber-400 bg-amber-500/10 border-amber-500/20' :
+            'text-rose-400 bg-rose-500/10 border-rose-500/20'
+          }`}>
+            {config.emoji} {config.label} · {config.rules}
+          </span>
+        </div>
+
         {gameState.status === 'waiting' ? (
           <div className="text-center py-8">
             <Loader2 className="w-12 h-12 mx-auto text-white/50 animate-spin mb-6" />
             <h3 className="text-xl font-semibold text-white mb-2">Waiting for opponent...</h3>
             <p className="text-white/60 mb-6">Share this code with your friend</p>
-            
+
             <div className="flex items-center justify-center gap-3 bg-black/20 p-4 rounded-2xl border border-white/10">
               <span className="text-3xl font-mono font-bold tracking-widest text-white">{gameId}</span>
               <button
@@ -274,7 +303,7 @@ export function Multiplayer({ onBack, userProfile }: { onBack: () => void, userP
                   <div className={`text-xs mt-2 font-bold animate-pulse ${getPlayerColor(mySymbol)}`}>YOUR TURN</div>
                 )}
               </div>
-              
+
               <div className="text-center px-2 flex-shrink-0">
                 <div className="text-xs text-white/50 uppercase tracking-widest font-semibold mb-1">Status</div>
                 <div className="text-sm font-medium text-white whitespace-nowrap">
@@ -299,10 +328,11 @@ export function Multiplayer({ onBack, userProfile }: { onBack: () => void, userP
               </div>
             </div>
 
-            <Board 
-              board={gameState.board} 
-              onClick={handleMove} 
-              disabled={!myTurn || gameState.status !== 'playing' || gameState.winner !== null} 
+            <Board
+              board={gameState.board}
+              onClick={handleMove}
+              disabled={!myTurn || gameState.status !== 'playing' || gameState.winner !== null}
+              size={detectedSize}
             />
 
             {gameState.winner && (

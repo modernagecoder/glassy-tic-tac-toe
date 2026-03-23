@@ -1,22 +1,28 @@
 import { motion } from 'motion/react';
-import { Player } from '../types';
+import { Player, BoardSize } from '../types';
 
 interface BoardProps {
   board: Player[];
   onClick: (index: number) => void;
   disabled?: boolean;
+  size?: BoardSize;
 }
 
-export function Board({ board, onClick, disabled = false }: BoardProps) {
+export function Board({ board, onClick, disabled = false, size = 3 }: BoardProps) {
+  const textSize = size === 3 ? 'text-5xl' : size === 4 ? 'text-3xl' : 'text-2xl';
+
   return (
-    <div className="grid grid-cols-3 gap-3 w-full max-w-sm mx-auto p-3 bg-white/5 rounded-2xl border border-white/10 shadow-inner">
+    <div
+      className={`grid gap-2 w-full max-w-sm mx-auto p-3 bg-white/5 rounded-2xl border border-white/10 shadow-inner`}
+      style={{ gridTemplateColumns: `repeat(${size}, 1fr)` }}
+    >
       {board.map((cell, index) => (
         <motion.button
           key={index}
           whileHover={!disabled && !cell ? { scale: 1.05 } : {}}
           whileTap={!disabled && !cell ? { scale: 0.95 } : {}}
           onClick={() => !disabled && !cell && onClick(index)}
-          className={`aspect-square rounded-xl flex items-center justify-center text-5xl font-bold transition-all touch-none ${
+          className={`aspect-square rounded-xl flex items-center justify-center ${textSize} font-bold transition-all touch-none ${
             !cell && !disabled ? 'hover:bg-white/10 cursor-pointer' : 'cursor-default'
           } ${
             cell === 'X' ? 'text-emerald-400' : cell === 'O' ? 'text-rose-400' : 'bg-white/5'
